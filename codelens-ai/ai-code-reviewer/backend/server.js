@@ -9,7 +9,7 @@ const reviewRoutes = require('./routes/review');
 const historyRoutes = require('./routes/history');
 
 const app = express();
-
+app.set('trust proxy', 1);
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
