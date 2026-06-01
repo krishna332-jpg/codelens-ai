@@ -70,24 +70,26 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ error: `Unsupported language. Supported: ${SUPPORTED_LANGUAGES.join(', ')}` });
     }
 
-    // Call Gemini API
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPrompt(code, lang) }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
-        })
-      }
-    );
+    // Call Groq API
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama3-8b-8192',
+        messages: [{ role: 'user', content: buildPrompt(code, lang) }],
+        temperature: 0.2,
+        max_tokens: 2000
+      })
+    });
 
-    const geminiData = await geminiRes.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const groqData = await groqRes.json();
+    const rawText = groqData?.choices?.[0]?.message?.content;
 
     if (!rawText) {
-      console.error('Gemini response:', JSON.stringify(geminiData));
+      console.error('Groq response:', JSON.stringify(groqData));
       return res.status(500).json({ error: 'No response from AI' });
     }
 
