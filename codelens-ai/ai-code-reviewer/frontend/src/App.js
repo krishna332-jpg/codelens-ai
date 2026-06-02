@@ -37,7 +37,11 @@ function AppInner() {
     <div className={`app ${dark ? 'dark' : 'light'}`}>
       <header className="header">
         <div className="logo">
-          <div className="logo-mark">CL</div>
+          <img
+            src="/site%20logo.jpg"
+            alt="CodeLens"
+            style={{width:'36px',height:'36px',borderRadius:'9px',objectFit:'cover',boxShadow:'0 4px 16px rgba(240,77,26,0.3)'}}
+          />
           <span className="logo-text">Code<span>Lens</span></span>
         </div>
         <div className="header-right">
