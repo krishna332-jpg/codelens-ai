@@ -12,16 +12,17 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: '*',
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting
+// Rate limiting - skip auth routes
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
-  message: { error: 'Too many requests, please try again later.' }
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' },
+  skip: (req) => req.path.includes('/auth/')
 });
 app.use('/api/', limiter);
 
