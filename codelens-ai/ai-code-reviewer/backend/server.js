@@ -3,13 +3,13 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
-
 const authRoutes = require('./routes/auth');
 const reviewRoutes = require('./routes/review');
 const historyRoutes = require('./routes/history');
 
 const app = express();
 app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
@@ -19,7 +19,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 50,
   message: { error: 'Too many requests, please try again later.' }
 });
@@ -34,6 +34,14 @@ app.use('/api/history', historyRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Keep alive - ping every 14 minutes to prevent Render free tier spin down
+setInterval(async () => {
+  try {
+    await fetch('https://codelens-ai-backend-p8ms.onrender.com/health');
+    console.log('Keep alive ping sent');
+  } catch (e) {}
+}, 840000);
 
 // Error handler
 app.use((err, req, res, next) => {
