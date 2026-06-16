@@ -31,62 +31,27 @@ export default function AuthModal({ mode, setMode, onClose }) {
     <div className="auth-page" onClick={onClose}>
       <div className="auth-card" onClick={e => e.stopPropagation()}>
         <div className="auth-brand">CodeLens</div>
-
         <div className="auth-tabs">
-          <button
-            className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
-            onClick={() => setMode('login')}
-          >Log in</button>
-          <button
-            className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
-            onClick={() => setMode('register')}
-          >Get started</button>
+          <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Log in</button>
+          <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Get started</button>
         </div>
-
         {mode === 'register' && (
           <>
             <label className="auth-label">Your name</label>
-            <input
-              className="auth-input"
-              type="text"
-              placeholder="e.g. Athul"
-              value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-            />
+            <input className="auth-input" type="text" placeholder="e.g. Athul" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </>
         )}
-
         <label className="auth-label">Email</label>
-        <input
-          className="auth-input"
-          type="email"
-          placeholder="you@example.com"
-          value={form.email}
-          onChange={e => setForm({ ...form, email: e.target.value })}
-        />
-
+        <input className="auth-input" type="email" placeholder="you@example.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
         <label className="auth-label">Password</label>
-        <input
-          className="auth-input"
-          type="password"
-          placeholder="••••••••"
-          value={form.password}
-          onChange={e => setForm({ ...form, password: e.target.value })}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          style={{ marginBottom: 0 }}
-        />
-
+        <input className="auth-input" type="password" placeholder="••••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSubmit()} style={{ marginBottom: 0 }} />
         {error && <p className="auth-error">{error}</p>}
-
         <button className="auth-submit" onClick={handleSubmit} disabled={loading}>
           {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
         </button>
-
         <div className="auth-divider"><span>or</span></div>
-
         <button className="auth-google" onClick={() => alert('Firebase Google sign-in coming soon')}>
-          <GoogleIcon />
-          Continue with Google
+          <GoogleIcon /> Continue with Google
         </button>
       </div>
     </div>
