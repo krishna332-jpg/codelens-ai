@@ -26,9 +26,7 @@ const ScoreRing = ({ score }) => {
 const IssueCard = ({ issue, index }) => (
   <div className="issue-card" style={{borderLeftColor: SEVERITY_COLOR[issue.severity] || '#111', animationDelay:`${index * 0.05}s`}}>
     <div className="issue-header">
-      {issue.severity && (
-        <span className="severity-badge" style={{background: SEVERITY_COLOR[issue.severity]}}>{issue.severity}</span>
-      )}
+      {issue.severity && <span className="severity-badge" style={{background: SEVERITY_COLOR[issue.severity]}}>{issue.severity}</span>}
       {issue.line && <span className="line-badge">Line {issue.line}</span>}
     </div>
     <p className="issue-message">{issue.message}</p>
@@ -60,16 +58,14 @@ export default function ReviewResult({ result, language, onBack }) {
   const { review, shareId } = result;
 
   const tabs = [
-    { id: 'overview',     label: 'Overview' },
-    { id: 'bugs',         label: `Bugs (${review.bugs?.length || 0})` },
-    { id: 'security',     label: `Security (${review.security?.length || 0})` },
-    { id: 'performance',  label: `Performance (${review.performance?.length || 0})` },
-    { id: 'practices',    label: `Best Practices (${review.bestPractices?.length || 0})` },
+    { id: 'overview',    label: 'Overview' },
+    { id: 'bugs',        label: `Bugs (${review.bugs?.length || 0})` },
+    { id: 'security',    label: `Security (${review.security?.length || 0})` },
+    { id: 'performance', label: `Performance (${review.performance?.length || 0})` },
+    { id: 'practices',   label: `Best Practices (${review.bestPractices?.length || 0})` },
   ];
 
-  const totalIssues =
-    (review.bugs?.length||0) + (review.security?.length||0) +
-    (review.performance?.length||0) + (review.bestPractices?.length||0);
+  const totalIssues = (review.bugs?.length||0) + (review.security?.length||0) + (review.performance?.length||0) + (review.bestPractices?.length||0);
 
   const handleShare = () => {
     navigator.clipboard.writeText(`${window.location.origin}/share/${shareId}`);
@@ -82,49 +78,32 @@ export default function ReviewResult({ result, language, onBack }) {
         <button className="back-btn" onClick={onBack}><BackIcon /> New review</button>
         <div className="topbar-right">
           <span className="lang-tag">{language}</span>
-          {shareId && (
-            <button className="share-btn" onClick={handleShare}>
-              <ShareIcon /> {copied ? 'Copied!' : 'Share'}
-            </button>
-          )}
+          {shareId && <button className="share-btn" onClick={handleShare}><ShareIcon /> {copied ? 'Copied!' : 'Share'}</button>}
         </div>
       </div>
 
       <div className="result-layout">
-        {/* Left: score + summary */}
         <div className="result-hero">
           <ScoreRing score={review.score || 0} />
           <div className="result-summary">
             <h2>Review Complete</h2>
             <p className="summary-text">{review.summary}</p>
             <div className="stats-row">
-              <div className="stat">
-                <span>{totalIssues}</span>
-                <span className="stat-label">Issues</span>
-              </div>
-              <div className="stat critical">
-                <span>{review.bugs?.filter(b => b.severity === 'critical').length || 0}</span>
-                <span className="stat-label">Critical</span>
-              </div>
-              <div className="stat good">
-                <span>{review.positives?.length || 0}</span>
-                <span className="stat-label">Positives</span>
-              </div>
+              <div className="stat"><span>{totalIssues}</span><span className="stat-label">Issues</span></div>
+              <div className="stat critical"><span>{review.bugs?.filter(b => b.severity === 'critical').length || 0}</span><span className="stat-label">Critical</span></div>
+              <div className="stat good"><span>{review.positives?.length || 0}</span><span className="stat-label">Positives</span></div>
             </div>
           </div>
         </div>
 
-        {/* Right: tabs + content */}
         <div className="result-right">
           <div className="tabs">
             {tabs.map(tab => (
-              <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}>
+              <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
                 {tab.label}
               </button>
             ))}
           </div>
-
           <div className="tab-content">
             {activeTab === 'overview' && (
               <div>
@@ -134,45 +113,26 @@ export default function ReviewResult({ result, language, onBack }) {
                     <ul>{review.positives.map((p, i) => <li key={i}>{p}</li>)}</ul>
                   </div>
                 )}
-                {totalIssues === 0
-                  ? <div className="perfect-code">No issues found — excellent code quality.</div>
-                  : (
-                    <div className="overview-issues">
-                      <h3>Issues by category</h3>
-                      {[['bugs','Bugs'],['security','Security'],['performance','Performance'],['bestPractices','Best Practices']].map(([cat, label]) => {
-                        const items = review[cat]; if (!items?.length) return null;
-                        const tabId = cat === 'bestPractices' ? 'practices' : cat;
-                        return (
-                          <div key={cat} className="overview-category" onClick={() => setActiveTab(tabId)}>
-                            <span>{label}</span>
-                            <span className="issue-count">{items.length}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                {totalIssues === 0 ? <div className="perfect-code">No issues found — excellent code quality.</div> : (
+                  <div className="overview-issues">
+                    <h3>Issues by category</h3>
+                    {[['bugs','Bugs'],['security','Security'],['performance','Performance'],['bestPractices','Best Practices']].map(([cat, label]) => {
+                      const items = review[cat]; if (!items?.length) return null;
+                      const tabId = cat === 'bestPractices' ? 'practices' : cat;
+                      return (
+                        <div key={cat} className="overview-category" onClick={() => setActiveTab(tabId)}>
+                          <span>{label}</span><span className="issue-count">{items.length}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-            {activeTab === 'bugs' && (
-              <div className="issues-list">
-                {review.bugs?.length > 0 ? review.bugs.map((b, i) => <IssueCard key={i} issue={b} index={i}/>) : <div className="no-issues">No bugs detected</div>}
-              </div>
-            )}
-            {activeTab === 'security' && (
-              <div className="issues-list">
-                {review.security?.length > 0 ? review.security.map((s, i) => <IssueCard key={i} issue={s} index={i}/>) : <div className="no-issues">No security issues</div>}
-              </div>
-            )}
-            {activeTab === 'performance' && (
-              <div className="issues-list">
-                {review.performance?.length > 0 ? review.performance.map((p, i) => <IssueCard key={i} issue={p} index={i}/>) : <div className="no-issues">No performance issues</div>}
-              </div>
-            )}
-            {activeTab === 'practices' && (
-              <div className="issues-list">
-                {review.bestPractices?.length > 0 ? review.bestPractices.map((p, i) => <IssueCard key={i} issue={p} index={i}/>) : <div className="no-issues">All best practices followed</div>}
-              </div>
-            )}
+            {activeTab === 'bugs' && <div className="issues-list">{review.bugs?.length > 0 ? review.bugs.map((b,i) => <IssueCard key={i} issue={b} index={i}/>) : <div className="no-issues">No bugs detected</div>}</div>}
+            {activeTab === 'security' && <div className="issues-list">{review.security?.length > 0 ? review.security.map((s,i) => <IssueCard key={i} issue={s} index={i}/>) : <div className="no-issues">No security issues</div>}</div>}
+            {activeTab === 'performance' && <div className="issues-list">{review.performance?.length > 0 ? review.performance.map((p,i) => <IssueCard key={i} issue={p} index={i}/>) : <div className="no-issues">No performance issues</div>}</div>}
+            {activeTab === 'practices' && <div className="issues-list">{review.bestPractices?.length > 0 ? review.bestPractices.map((p,i) => <IssueCard key={i} issue={p} index={i}/>) : <div className="no-issues">All best practices followed</div>}</div>}
           </div>
         </div>
       </div>
