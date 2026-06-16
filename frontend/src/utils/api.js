@@ -11,17 +11,10 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export const reviewCode = (code, language) =>
-  API.post('/api/review', { code, language });
-
+export const reviewCode = (code, language) => API.post('/api/review', { code, language });
 export const getHistory = () => API.get('/api/history');
-
 export const deleteReview = (shareId) => API.delete(`/api/history/${shareId}`);
-
-export const login = (email, password) =>
-  API.post('/api/auth/login', { email, password });
-
-export const register = (name, email, password) =>
-  API.post('/api/auth/register', { name, email, password });
+export const login = (email, password) => API.post('/api/auth/login', { email, password });
+export const register = (name, email, password) => API.post('/api/auth/register', { name, email, password });
 
 export default API;
