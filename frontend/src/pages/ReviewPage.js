@@ -81,7 +81,6 @@ export default function ReviewPage({ onAuthRequired }) {
         <p className="editor-subtitle">Detects bugs, security issues, performance problems & best practice violations.</p>
       </div>
 
-      {/* Language grid — square glass cards */}
       <div className="lang-pills">
         {LANGUAGES.map(lang => (
           <button
@@ -128,7 +127,7 @@ export default function ReviewPage({ onAuthRequired }) {
               className="code-editor"
               value={code}
               onChange={e => setCode(e.target.value)}
-              placeholder={`// Paste your ${currentLang?.label || language} code here...\n// CodeLens AI will analyze:\n// — Bugs & errors\n// — Security vulnerabilities\n// — Performance issues\n// — Best practice violations`}
+              placeholder={`// Paste your ${currentLang?.label || language} code here...`}
               spellCheck={false}
             />
           </div>
@@ -136,11 +135,7 @@ export default function ReviewPage({ onAuthRequired }) {
           <div className="editor-footer">
             <span className="char-count">{code.length.toLocaleString()} / 20,000</span>
             {error && <p className="error-msg">{error}</p>}
-            <button
-              className="review-btn"
-              onClick={handleReview}
-              disabled={loading || !code.trim()}
-            >
+            <button className="review-btn" onClick={handleReview} disabled={loading || !code.trim()}>
               {loading ? <><span className="spinner" /> Analyzing...</> : <>Review Code <ArrowRightIcon /></>}
             </button>
           </div>
