@@ -19,7 +19,7 @@ export default function HistoryPanel({ onClose }) {
     catch { setError('Failed to delete'); }
   };
 
-  const getScoreColor = (score) => score >= 80 ? '#1fd97a' : score >= 60 ? '#ffc542' : '#ff3d57';
+  const getScoreColor = (score) => score >= 80 ? '#4ade80' : score >= 60 ? '#fbbf24' : '#f87171';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -29,16 +29,14 @@ export default function HistoryPanel({ onClose }) {
         <p className="modal-sub">All your past code reviews</p>
         {loading && <p className="loading-text">Loading...</p>}
         {error && <p className="error-msg">{error}</p>}
-        {!loading && reviews.length === 0 && (
-          <p className="empty-state">No reviews yet. Start by reviewing some code!</p>
-        )}
+        {!loading && reviews.length === 0 && <p className="empty-state">No reviews yet. Start by reviewing some code!</p>}
         <div className="history-list">
           {reviews.map(r => (
             <div key={r.shareId} className="history-item">
               <div className="history-item-left">
                 <span className="lang-tag" style={{alignSelf:'flex-start',marginBottom:'4px'}}>{r.language}</span>
                 <span className="history-summary">{r.review?.summary?.slice(0, 90)}...</span>
-                <span className="history-date">{new Date(r.createdAt).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</span>
+                <span className="history-date">{new Date(r.createdAt).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})}</span>
               </div>
               <div className="history-item-right">
                 <span className="history-score" style={{color: getScoreColor(r.review?.score)}}>{r.review?.score}</span>
