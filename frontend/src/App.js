@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ReviewPage from './pages/ReviewPage';
