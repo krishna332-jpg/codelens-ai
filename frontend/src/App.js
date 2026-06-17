@@ -1,15 +1,8 @@
-]import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ReviewPage from './pages/ReviewPage';
-import AuthModal from './components/AuthModal';
 import HistoryPanel from './components/HistoryPanel';
 import './App.css';
-
-const ClockIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-  </svg>
-);
 
 function ClothCanvas() {
   const canvasRef = useRef(null);
@@ -31,7 +24,6 @@ function ClothCanvas() {
       canvas.height = window.innerHeight;
     }
     resize();
-    window.addEventListener('resize', () => { resize(); buildStrings(); });
 
     class Point {
       constructor(x, y, pinned) {
@@ -89,7 +81,7 @@ function ClothCanvas() {
       }
       draw() {
         const fontSize = Math.max(9, COL_SPACING * 0.72);
-        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.font = 'bold ' + fontSize + 'px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (let i = 0; i < this.points.length - 1; i++) {
@@ -100,7 +92,7 @@ function ClothCanvas() {
           ctx.save();
           ctx.translate(p.x, p.y);
           ctx.rotate(angle);
-          ctx.fillStyle = 'rgba(30,28,26,0.72)';
+          ctx.fillStyle = 'rgba(30,28,26,0.65)';
           ctx.fillText(ch, 0, 0);
           ctx.restore();
         }
@@ -115,47 +107,50 @@ function ClothCanvas() {
         strings.push(new StringLine(i * COL_SPACING, (i * 7) % CHARS.length));
     }
     buildStrings();
+    window.addEventListener('resize', function() { resize(); buildStrings(); });
 
     const mouse = { x: -9999, y: -9999 };
-    const onMove = e => {
+    const onMove = function(e) {
       const r = canvas.getBoundingClientRect();
       mouse.x = e.clientX - r.left;
       mouse.y = e.clientY - r.top;
     };
-    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; };
+    const onLeave = function() { mouse.x = -9999; mouse.y = -9999; };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseleave', onLeave);
 
     function tick() {
       rafID = requestAnimationFrame(tick);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const s of strings) { s.update(mouse.x, mouse.y); s.draw(); }
+      for (let i = 0; i < strings.length; i++) {
+        strings[i].update(mouse.x, mouse.y);
+        strings[i].draw();
+      }
     }
     tick();
 
-    return () => {
+    return function() {
       cancelAnimationFrame(rafID);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseleave', onLeave);
     };
   }, []);
-  return <canvas ref={canvasRef} id="cloth-canvas" />;
+  return React.createElement('canvas', { ref: canvasRef, id: 'cloth-canvas' });
 }
 
-function AuthPage({ mode, setMode, onSuccess }) {
+function AuthPage({ mode, setMode }) {
   const { login, register } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async function() {
     setError(''); setLoading(true);
     try {
       if (mode === 'login') await login(form.email, form.password);
       else await register(form.name, form.email, form.password);
-      onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong');
+      setError(err.response && err.response.data && err.response.data.error ? err.response.data.error : 'Something went wrong');
     } finally { setLoading(false); }
   };
 
@@ -165,15 +160,15 @@ function AuthPage({ mode, setMode, onSuccess }) {
         <div className="auth-brand">CodeLens</div>
         <p className="auth-tagline">AI-powered code review, instantly.</p>
         <div className="auth-tabs">
-          <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Log in</button>
-          <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Get started</button>
+          <button className={'auth-tab' + (mode === 'login' ? ' active' : '')} onClick={() => setMode('login')}>Log in</button>
+          <button className={'auth-tab' + (mode === 'register' ? ' active' : '')} onClick={() => setMode('register')}>Get started</button>
         </div>
         {mode === 'register' && (
-          <>
+          <div>
             <label className="auth-label">Your name</label>
             <input className="auth-input" type="text" placeholder="e.g. Athul"
               value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-          </>
+          </div>
         )}
         <label className="auth-label">Email</label>
         <input className="auth-input" type="email" placeholder="you@example.com"
@@ -181,14 +176,14 @@ function AuthPage({ mode, setMode, onSuccess }) {
         <label className="auth-label">Password</label>
         <input className="auth-input" type="password" placeholder="••••••••"
           value={form.password} onChange={e => setForm({...form, password: e.target.value})}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()} style={{marginBottom:0}} />
+          onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }} style={{marginBottom: 0}} />
         {error && <p className="auth-error">{error}</p>}
         <button className="auth-submit" onClick={handleSubmit} disabled={loading}>
           {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
         </button>
         <div className="auth-divider"><span>or</span></div>
         <button className="auth-google" onClick={() => alert('Google sign-in coming soon')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" style={{flexShrink:0}}>
+          <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -201,24 +196,30 @@ function AuthPage({ mode, setMode, onSuccess }) {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  );
+}
+
 function AppInner() {
   const { user, logout } = useAuth();
   const [authMode, setAuthMode] = useState('login');
   const [showHistory, setShowHistory] = useState(false);
 
-  const handleLogout = () => { logout(); setAuthMode('login'); };
+  const handleLogout = function() { logout(); setAuthMode('login'); };
 
   return (
     <div className="app">
       <ClothCanvas />
       {!user ? (
-        <AuthPage mode={authMode} setMode={setAuthMode} onSuccess={() => {}} />
+        <AuthPage mode={authMode} setMode={setAuthMode} />
       ) : (
-        <>
+        <div>
           <header className="header">
-            <div className="logo">
-              <span className="logo-text">Code<span>Lens</span></span>
-            </div>
+            <span className="logo-text">CodeLens</span>
             <div className="header-right">
               <button className="history-btn" onClick={() => setShowHistory(true)}>
                 <ClockIcon /> History
@@ -231,12 +232,16 @@ function AppInner() {
             <ReviewPage />
           </main>
           {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
-        </>
+        </div>
       )}
     </div>
   );
 }
 
 export default function App() {
-  return <AuthProvider><AppInner /></AuthProvider>;
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  );
 }
