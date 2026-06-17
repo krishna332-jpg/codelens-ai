@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+]import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import ReviewPage from './pages/ReviewPage';
 import AuthModal from './components/AuthModal';
@@ -13,213 +13,226 @@ const ClockIcon = () => (
 
 function ClothCanvas() {
   const canvasRef = useRef(null);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let rafID;
+    const CHARS = 'function main(){this.pos.x=lerp(a,b,t);const vel=new Vec2();if(dist<radius){applyForce(dx,dy);}return result.score;var gravity=0.3;damping*=0.99;p.x+=vx;p.y+=vy+g;spring.solve();node.update(delta);}reviewCode(code,language);analyzeWithAI(prompt);class CodeLens{constructor(){this.api=new API();}}';
+    const GRAVITY = 0.55;
+    const DAMPING = 0.978;
+    const SEGMENTS = 20;
+    const MOUSE_RADIUS = 100;
+    const MOUSE_STRENGTH = 22;
+    const COL_SPACING = 18;
 
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     }
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', () => { resize(); buildStrings(); });
 
-    const CODE = `function reviewCode(code,language){const prompt=buildPrompt(code,language);const result=analyzeWithAI(prompt);return{score:result.score,bugs:result.bugs,security:result.security,performance:result.performance,bestPractices:result.bestPractices,summary:result.summary,positives:result.positives};}class CodeLens{constructor(){this.api=new API();this.auth=new Auth();}async review(code,lang){if(!this.auth.user)throw new Error("Login required");return await this.api.post("/review",{code,lang});}}`;
-
-    const gridW = 40;
-    const gridH = 20;
-    const cellW = window.innerWidth / (gridW - 1);
-    const cellH = window.innerHeight / (gridH - 1);
-    const GRAVITY = 0.3;
-    const DAMPING = 0.99;
-    const ITERATIONS = 5;
-    const MOUSE_RADIUS = 8000;
-    const MOUSE_STRENGTH = 6;
-
-    const fontSize = Math.max(10, cellH * 0.8);
-    const charCanvases = {};
-    for (const ch of new Set(CODE)) {
-      if (ch === ' ') continue;
-      const off = document.createElement('canvas');
-      off.width = off.height = Math.ceil(fontSize * 1.5);
-      const octx = off.getContext('2d');
-      octx.font = `bold ${fontSize}px monospace`;
-      octx.textAlign = 'center';
-      octx.textBaseline = 'middle';
-      octx.fillStyle = 'rgba(255,255,255,0.55)';
-      octx.fillText(ch, off.width / 2, off.height / 2);
-      charCanvases[ch] = off;
+    class Point {
+      constructor(x, y, pinned) {
+        this.x = x; this.y = y; this.ox = x; this.oy = y;
+        this.ax = 0; this.ay = 0; this.pinned = pinned;
+      }
+      update() {
+        if (this.pinned) return;
+        const vx = (this.x - this.ox) * DAMPING;
+        const vy = (this.y - this.oy) * DAMPING;
+        this.ox = this.x; this.oy = this.y;
+        this.x += vx + this.ax;
+        this.y += vy + this.ay + GRAVITY;
+        this.ax = 0; this.ay = 0;
+      }
+      applyForce(fx, fy) { this.ax += fx; this.ay += fy; }
     }
 
-    const particles = [];
-    for (let j = 0; j < gridH; j++) {
-      for (let i = 0; i < gridW; i++) {
-        const idx = (i + j * gridW) % CODE.length;
-        particles.push({
-          x: i * cellW,
-          y: j * cellH,
-          ox: i * cellW,
-          oy: j * cellH,
-          ax: 0, ay: 0,
-          pinned: j === 0,
-          char: CODE[idx] || ' ',
-          downConstraint: null,
-        });
+    class Spring {
+      constructor(p1, p2, len) { this.p1 = p1; this.p2 = p2; this.len = len; }
+      solve() {
+        const dx = this.p2.x - this.p1.x;
+        const dy = this.p2.y - this.p1.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const diff = (dist - this.len) / dist * 0.5;
+        const ox = dx * diff, oy = dy * diff;
+        if (!this.p1.pinned) { this.p1.x += ox; this.p1.y += oy; }
+        if (!this.p2.pinned) { this.p2.x -= ox; this.p2.y -= oy; }
       }
     }
 
-    const constraints = [];
-    for (let j = 0; j < gridH; j++) {
-      for (let i = 0; i < gridW; i++) {
-        const p = particles[j * gridW + i];
-        if (j < gridH - 1) {
-          const b = particles[(j + 1) * gridW + i];
-          const c = { p1: p, p2: b, len: cellH, min: cellH * 0.02, max: cellH * 1.1 };
-          constraints.push(c);
-          p.downConstraint = c;
+    class StringLine {
+      constructor(x, charOffset) {
+        this.x = x; this.charOffset = charOffset;
+        this.segH = canvas.height / (SEGMENTS - 1);
+        this.points = []; this.springs = [];
+        for (let i = 0; i < SEGMENTS; i++)
+          this.points.push(new Point(x, i * this.segH, i === 0));
+        for (let i = 0; i < SEGMENTS - 1; i++)
+          this.springs.push(new Spring(this.points[i], this.points[i+1], this.segH));
+      }
+      update(mx, my) {
+        for (const p of this.points) {
+          if (p.pinned) continue;
+          const dx = p.x - mx, dy = p.y - my;
+          const dist = Math.hypot(dx, dy);
+          if (dist < MOUSE_RADIUS) {
+            const force = (1 - dist / MOUSE_RADIUS) * MOUSE_STRENGTH;
+            const angle = Math.atan2(dy, dx);
+            p.applyForce(Math.cos(angle) * force, Math.sin(angle) * force);
+          }
         }
-        if (i < gridW - 1) {
-          const r = particles[j * gridW + (i + 1)];
-          constraints.push({ p1: p, p2: r, len: cellW, min: cellW * 0.6, max: cellW * 4 });
+        for (let i = 0; i < 5; i++) for (const s of this.springs) s.solve();
+        for (const p of this.points) p.update();
+      }
+      draw() {
+        const fontSize = Math.max(9, COL_SPACING * 0.72);
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < this.points.length - 1; i++) {
+          const p = this.points[i], pn = this.points[i+1];
+          const angle = Math.atan2(pn.y - p.y, pn.x - p.x) - Math.PI / 2;
+          const ch = CHARS[(this.charOffset + i) % CHARS.length];
+          if (ch === ' ') continue;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(angle);
+          ctx.fillStyle = 'rgba(30,28,26,0.72)';
+          ctx.fillText(ch, 0, 0);
+          ctx.restore();
         }
       }
     }
+
+    let strings = [];
+    function buildStrings() {
+      strings = [];
+      const cols = Math.ceil(canvas.width / COL_SPACING) + 2;
+      for (let i = 0; i < cols; i++)
+        strings.push(new StringLine(i * COL_SPACING, (i * 7) % CHARS.length));
+    }
+    buildStrings();
 
     const mouse = { x: -9999, y: -9999 };
-
-    function onMove(e) {
-      const touch = e.touches ? e.touches[0] : e;
-      mouse.x = touch.clientX;
-      mouse.y = touch.clientY;
-    }
+    const onMove = e => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - r.left;
+      mouse.y = e.clientY - r.top;
+    };
+    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; };
     window.addEventListener('mousemove', onMove);
-    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('mouseleave', onLeave);
 
-    let last = 0;
-    function tick(now) {
+    function tick() {
       rafID = requestAnimationFrame(tick);
-      const delta = Math.min(now - last, 32);
-      last = now;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      for (const p of particles) {
-        if (p.pinned) { p.ax = 0; p.ay = 0; continue; }
-
-        const vx = (p.x - p.ox) * DAMPING;
-        const vy = (p.y - p.oy) * DAMPING;
-        p.ox = p.x; p.oy = p.y;
-
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
-        const dist2 = dx * dx + dy * dy;
-        if (dist2 < MOUSE_RADIUS) {
-          const strength = (1 - dist2 / MOUSE_RADIUS) * MOUSE_STRENGTH / 300;
-          const angle = Math.atan2(dy, dx);
-          p.ax += Math.cos(angle) * strength;
-          p.ay += Math.sin(angle) * strength;
-        }
-
-        p.ay += GRAVITY / 1000;
-        const dd = (delta || 16) ** 2;
-        p.x += vx + p.ax * dd * 0.001;
-        p.y += vy + p.ay * dd * 0.001;
-        p.ax = 0; p.ay = 0;
-      }
-
-      for (let it = 0; it < ITERATIONS; it++) {
-        for (const c of constraints) {
-          const dx = c.p2.x - c.p1.x;
-          const dy = c.p2.y - c.p1.y;
-          const dist = Math.hypot(dx, dy) || 0.001;
-          let target = c.len;
-          if (dist < c.min) target = c.min;
-          else if (dist > c.max) target = c.max;
-          else continue;
-          const pct = (target - dist) / dist / 2;
-          const ox = dx * pct, oy = dy * pct;
-          if (!c.p1.pinned) { c.p1.x -= ox; c.p1.y -= oy; }
-          if (!c.p2.pinned) { c.p2.x += ox; c.p2.y += oy; }
-        }
-      }
-
-      for (const p of particles) {
-        if (!p.char || p.char === ' ') continue;
-        const img = charCanvases[p.char];
-        if (!img) continue;
-        const half = img.width / 2;
-
-        let cos = 1, sin = 0;
-        if (p.downConstraint) {
-          const dc = p.downConstraint;
-          const ddx = dc.p2.x - dc.p1.x;
-          const ddy = dc.p2.y - dc.p1.y;
-          const angle = Math.atan2(ddy, ddx) - Math.PI / 2;
-          cos = Math.cos(angle);
-          sin = Math.sin(angle);
-        }
-        ctx.setTransform(cos, sin, -sin, cos, p.x, p.y);
-        ctx.drawImage(img, -half, -half);
-      }
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (const s of strings) { s.update(mouse.x, mouse.y); s.draw(); }
     }
-    rafID = requestAnimationFrame(tick);
+    tick();
 
     return () => {
       cancelAnimationFrame(rafID);
-      window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mouseleave', onLeave);
     };
   }, []);
-
   return <canvas ref={canvasRef} id="cloth-canvas" />;
+}
+
+function AuthPage({ mode, setMode, onSuccess }) {
+  const { login, register } = useAuth();
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError(''); setLoading(true);
+    try {
+      if (mode === 'login') await login(form.email, form.password);
+      else await register(form.name, form.email, form.password);
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Something went wrong');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="auth-overlay">
+      <div className="auth-card">
+        <div className="auth-brand">CodeLens</div>
+        <p className="auth-tagline">AI-powered code review, instantly.</p>
+        <div className="auth-tabs">
+          <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Log in</button>
+          <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Get started</button>
+        </div>
+        {mode === 'register' && (
+          <>
+            <label className="auth-label">Your name</label>
+            <input className="auth-input" type="text" placeholder="e.g. Athul"
+              value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          </>
+        )}
+        <label className="auth-label">Email</label>
+        <input className="auth-input" type="email" placeholder="you@example.com"
+          value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+        <label className="auth-label">Password</label>
+        <input className="auth-input" type="password" placeholder="••••••••"
+          value={form.password} onChange={e => setForm({...form, password: e.target.value})}
+          onKeyDown={e => e.key === 'Enter' && handleSubmit()} style={{marginBottom:0}} />
+        {error && <p className="auth-error">{error}</p>}
+        <button className="auth-submit" onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+        </button>
+        <div className="auth-divider"><span>or</span></div>
+        <button className="auth-google" onClick={() => alert('Google sign-in coming soon')}>
+          <svg width="18" height="18" viewBox="0 0 24 24" style={{flexShrink:0}}>
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function AppInner() {
   const { user, logout } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [showHistory, setShowHistory] = useState(false);
+
+  const handleLogout = () => { logout(); setAuthMode('login'); };
 
   return (
     <div className="app">
       <ClothCanvas />
-
-      <header className="header">
-        <div className="logo">
-          <span className="logo-text">Code<span>Lens</span></span>
-        </div>
-        <div className="header-right">
-          {user ? (
-            <>
+      {!user ? (
+        <AuthPage mode={authMode} setMode={setAuthMode} onSuccess={() => {}} />
+      ) : (
+        <>
+          <header className="header">
+            <div className="logo">
+              <span className="logo-text">Code<span>Lens</span></span>
+            </div>
+            <div className="header-right">
               <button className="history-btn" onClick={() => setShowHistory(true)}>
                 <ClockIcon /> History
               </button>
               <span className="user-badge">{user.name}</span>
-              <button className="nav-btn logout" onClick={logout}>Sign out</button>
-            </>
-          ) : (
-            <>
-              <button className="nav-btn" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>Log in</button>
-              <button className="nav-btn" style={{background:'#fff',color:'#111',borderColor:'#fff'}}
-                onClick={() => { setAuthMode('register'); setShowAuth(true); }}>Get started</button>
-            </>
-          )}
-        </div>
-      </header>
-
-      <main>
-        <ReviewPage onAuthRequired={() => { setAuthMode('register'); setShowAuth(true); }} />
-      </main>
-
-      {showAuth && (
-        <AuthModal mode={authMode} setMode={setAuthMode} onClose={() => setShowAuth(false)} />
+              <button className="nav-btn logout" onClick={handleLogout}>Sign out</button>
+            </div>
+          </header>
+          <main>
+            <ReviewPage />
+          </main>
+          {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
+        </>
       )}
-      {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
     </div>
   );
 }
