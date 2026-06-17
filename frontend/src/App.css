@@ -39,7 +39,7 @@ button { cursor: pointer; font-family: 'Inter', sans-serif; border: none; backgr
 input, select, textarea { font-family: 'Inter', sans-serif; }
 
 /* ── STRING CANVAS ── */
-#string-canvas {
+#cloth-canvas {
   position: fixed;
   inset: 0;
   width: 100vw;
