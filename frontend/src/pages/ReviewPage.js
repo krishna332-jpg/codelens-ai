@@ -45,7 +45,7 @@ const LockIcon = () => (
   </svg>
 );
 
-export default function ReviewPage({ onAuthRequired }) {
+export default function ReviewPage() {
   const { user } = useAuth();
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
