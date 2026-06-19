@@ -13,26 +13,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    if (token && userData) {
+      setUser(JSON.parse(userData));
+    }
+    setLoading(false);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
-        localStorage.setItem('token', token);
-        setUser({
+        const userData = {
           name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
           email: firebaseUser.email,
-          photo: firebaseUser.photoURL,
           uid: firebaseUser.uid,
-        });
-      } else {
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
-        if (token && userData) {
-          setUser(JSON.parse(userData));
-        } else {
-          setUser(null);
-        }
+        };
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
       }
-      setLoading(false);
     });
     return unsubscribe;
   }, []);
@@ -56,30 +55,30 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     const firebaseUser = await signInWithGoogle();
     const token = await firebaseUser.getIdToken();
+    const userData = {
+      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+      email: firebaseUser.email,
+      uid: firebaseUser.uid,
+    };
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+
     try {
       const res = await axios.post(API_URL + '/api/auth/google', {
-        token,
         name: firebaseUser.displayName,
         email: firebaseUser.email,
-        photo: firebaseUser.photoURL,
       });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setUser(res.data.user);
     } catch (err) {
-      const userData = {
-        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-        email: firebaseUser.email,
-        photo: firebaseUser.photoURL,
-      };
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      console.log('Backend sync skipped, using Firebase auth only');
     }
   };
 
   const logout = async () => {
-    await firebaseSignOut();
+    try { await firebaseSignOut(); } catch (e) {}
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
