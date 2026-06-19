@@ -20,7 +20,6 @@ router.post('/register', async (req, res) => {
     }
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email already in use' });
-
     const user = new User({ name, email, password });
     await user.save();
     const token = generateToken(user);
@@ -35,7 +34,6 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -44,6 +42,31 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Google login
+router.post('/google', async (req, res) => {
+  try {
+    const { name, email, photo } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({
+        name: name || email.split('@')[0],
+        email,
+        password: Math.random().toString(36),
+        photo: photo || '',
+        googleAuth: true,
+      });
+      await user.save();
+    }
+
+    const token = generateToken(user);
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, photo: user.photo } });
+  } catch (err) {
+    res.status(500).json({ error: 'Google login failed' });
   }
 });
 
