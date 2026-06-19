@@ -186,7 +186,8 @@ function AuthPage({ mode, setMode }) {
   try {
     await loginWithGoogle();
   } catch (err) {
-    setError('Google sign-in failed. Please try again.');
+    console.error('Google error:', err);
+    setError(err.code + ': ' + err.message);
   }
 }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
