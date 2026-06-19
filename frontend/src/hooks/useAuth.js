@@ -1,11 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { auth, signInWithGoogle, firebaseSignOut } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { login as apiLogin, register as apiRegister } from '../utils/api';
+import { auth, firebaseSignOut, getRedirectResult } from '../firebase';
+import { onAuthStateChanged, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
-
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const AuthProvider = ({ children }) => {
@@ -13,68 +11,54 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
+    const stored = localStorage.getItem('user');
+    if (stored) setUser(JSON.parse(stored));
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
+    getRedirectResult(auth).then(async (result) => {
+      if (result && result.user) {
+        const firebaseUser = result.user;
         const userData = {
           name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
           email: firebaseUser.email,
           uid: firebaseUser.uid,
         };
-        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+        try {
+          const res = await axios.post(API_URL + '/api/auth/google', {
+            name: firebaseUser.displayName,
+            email: firebaseUser.email,
+          });
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+          setUser(res.data.user);
+        } catch (e) {
+          console.log('Backend sync skipped');
+        }
       }
+    }).catch(err => {
+      console.error('Redirect result error:', err);
+    }).finally(() => {
+      setLoading(false);
     });
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const stored = localStorage.getItem('user');
+        if (stored) setUser(JSON.parse(stored));
+      } else {
+        const stored = localStorage.getItem('user');
+        if (!stored) setUser(null);
+      }
+      setLoading(false);
+    });
+
     return unsubscribe;
   }, []);
 
-  const login = async (email, password) => {
-    const res = await apiLogin(email, password);
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const register = async (name, email, password) => {
-    const res = await apiRegister(name, email, password);
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
-    return res.data;
-  };
-
   const loginWithGoogle = async () => {
-    const firebaseUser = await signInWithGoogle();
-    const token = await firebaseUser.getIdToken();
-    const userData = {
-      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-      email: firebaseUser.email,
-      uid: firebaseUser.uid,
-    };
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-
-    try {
-      const res = await axios.post(API_URL + '/api/auth/google', {
-        name: firebaseUser.displayName,
-        email: firebaseUser.email,
-      });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      setUser(res.data.user);
-    } catch (err) {
-      console.log('Backend sync skipped, using Firebase auth only');
-    }
+    const provider = new GoogleAuthProvider();
+    await signInWithRedirect(auth, provider);
   };
 
   const logout = async () => {
@@ -85,7 +69,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, loading }}>
+    <AuthContext.Provider value={{ user, loginWithGoogle, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
