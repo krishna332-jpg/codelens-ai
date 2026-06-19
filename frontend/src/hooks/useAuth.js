@@ -1,19 +1,40 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { auth, signInWithGoogle, firebaseSignOut } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { login as apiLogin, register as apiRegister } from '../utils/api';
+import axios from 'axios';
 
 const AuthContext = createContext(null);
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const token = await firebaseUser.getIdToken();
+        localStorage.setItem('token', token);
+        setUser({
+          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          email: firebaseUser.email,
+          photo: firebaseUser.photoURL,
+          uid: firebaseUser.uid,
+        });
+      } else {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        if (token && userData) {
+          setUser(JSON.parse(userData));
+        } else {
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   const login = async (email, password) => {
@@ -32,15 +53,41 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const logout = () => {
+  const loginWithGoogle = async () => {
+    const firebaseUser = await signInWithGoogle();
+    const token = await firebaseUser.getIdToken();
+    try {
+      const res = await axios.post(API_URL + '/api/auth/google', {
+        token,
+        name: firebaseUser.displayName,
+        email: firebaseUser.email,
+        photo: firebaseUser.photoURL,
+      });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      setUser(res.data.user);
+    } catch (err) {
+      const userData = {
+        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        email: firebaseUser.email,
+        photo: firebaseUser.photoURL,
+      };
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    }
+  };
+
+  const logout = async () => {
+    await firebaseSignOut();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
-      {children}
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
