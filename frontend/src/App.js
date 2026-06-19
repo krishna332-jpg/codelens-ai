@@ -158,7 +158,7 @@ function AuthPage() {
         <div className="auth-brand">CodeLens</div>
         <p className="auth-tagline">AI-powered code review, instantly.</p>
 
-        <div className="auth-divider" style={{margin: '28px 0 24px'}}><span>sign in to continue</span></div>
+        <div className="auth-divider" style={{margin: '28px 0 24px'}}><span>signup / login to continue</span></div>
 
         {error && <p className="auth-error">{error}</p>}
 
