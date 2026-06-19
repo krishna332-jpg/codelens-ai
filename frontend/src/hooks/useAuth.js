@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { auth, firebaseSignOut, getRedirectResult } from '../firebase';
+import { auth, firebaseSignOut } from '../firebase';
 import { onAuthStateChanged, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import axios from 'axios';
 
@@ -10,42 +10,37 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const handleFirebaseUser = async (firebaseUser) => {
+    if (!firebaseUser) return;
+    const userData = {
+      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+      email: firebaseUser.email,
+      uid: firebaseUser.uid,
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    try {
+      const res = await axios.post(API_URL + '/api/auth/google', {
+        name: firebaseUser.displayName,
+        email: firebaseUser.email,
+      });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      setUser(res.data.user);
+    } catch (e) {
+      console.log('Backend sync skipped, using Firebase auth');
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
+    if (stored) {
+      try { setUser(JSON.parse(stored)); } catch (e) {}
+    }
 
-    getRedirectResult(auth).then(async (result) => {
-      if (result && result.user) {
-        const firebaseUser = result.user;
-        const userData = {
-          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          email: firebaseUser.email,
-          uid: firebaseUser.uid,
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        try {
-          const res = await axios.post(API_URL + '/api/auth/google', {
-            name: firebaseUser.displayName,
-            email: firebaseUser.email,
-          });
-          localStorage.setItem('token', res.data.token);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
-          setUser(res.data.user);
-        } catch (e) {
-          console.log('Backend sync skipped');
-        }
-      }
-    }).catch(err => {
-      console.error('Redirect result error:', err);
-    }).finally(() => {
-      setLoading(false);
-    });
-
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const stored = localStorage.getItem('user');
-        if (stored) setUser(JSON.parse(stored));
+        await handleFirebaseUser(firebaseUser);
       } else {
         const stored = localStorage.getItem('user');
         if (!stored) setUser(null);
