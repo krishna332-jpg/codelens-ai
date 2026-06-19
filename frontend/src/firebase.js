@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
+import { getAuth, signOut } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgYHAGwXucg6I97HEzRxJ35vkIlYNgP7k",
@@ -13,11 +13,4 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
-export const signInWithGoogle = async () => {
-  await signInWithRedirect(auth, googleProvider);
-};
-
-export { getRedirectResult, signOut };
 export const firebaseSignOut = () => signOut(auth);
