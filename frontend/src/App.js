@@ -139,7 +139,7 @@ function ClothCanvas() {
 }
 
 function AuthPage({ mode, setMode }) {
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -151,6 +151,16 @@ function AuthPage({ mode, setMode }) {
       else await register(form.name, form.email, form.password);
     } catch (err) {
       setError(err.response && err.response.data && err.response.data.error ? err.response.data.error : 'Something went wrong');
+    } finally { setLoading(false); }
+  };
+
+  const handleGoogle = async function() {
+    setError(''); setLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error('Google error full:', err);
+      setError(err.code ? err.code + ': ' + err.message : 'Google sign-in failed: ' + err.message);
     } finally { setLoading(false); }
   };
 
@@ -182,14 +192,7 @@ function AuthPage({ mode, setMode }) {
           {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
         </button>
         <div className="auth-divider"><span>or</span></div>
-        <button className="auth-google" onClick={async () => {
-  try {
-    await loginWithGoogle();
-  } catch (err) {
-    console.error('Google error:', err);
-    setError(err.code + ': ' + err.message);
-  }
-}}>
+        <button className="auth-google" onClick={handleGoogle} disabled={loading}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
