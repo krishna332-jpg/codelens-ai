@@ -11,12 +11,10 @@ const SUPPORTED_LANGUAGES = [
 
 const buildPrompt = (code, language) => `
 You are an expert code reviewer. Analyze the following ${language} code and return ONLY valid JSON (no markdown, no explanation outside JSON).
-
 Code to review:
 \`\`\`${language}
 ${code}
 \`\`\`
-
 Return this exact JSON structure:
 {
   "summary": "2-3 sentence overall summary of the code quality",
@@ -51,14 +49,12 @@ Return this exact JSON structure:
     }
   ]
 }
-
 Be specific, actionable, and accurate. If no issues found in a category, return an empty array.
 `;
 
 router.post('/', auth, async (req, res) => {
   try {
     const { code, language } = req.body;
-
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ error: 'Code is required' });
     }
@@ -70,7 +66,6 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ error: `Unsupported language. Supported: ${SUPPORTED_LANGUAGES.join(', ')}` });
     }
 
-    // Call Groq API
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -87,7 +82,6 @@ router.post('/', auth, async (req, res) => {
 
     const groqData = await groqRes.json();
     const rawText = groqData?.choices?.[0]?.message?.content;
-
     if (!rawText) {
       console.error('Groq response:', JSON.stringify(groqData));
       return res.status(500).json({ error: 'No response from AI' });
@@ -102,12 +96,12 @@ router.post('/', auth, async (req, res) => {
     }
 
     const shareId = uuidv4().slice(0, 8);
-
     let savedReview = null;
     try {
       savedReview = await Review.create({
         shareId,
         userId: req.user?.id || null,
+        userEmail: req.user?.email || null,
         code,
         language: lang,
         review: reviewData
@@ -122,14 +116,12 @@ router.post('/', auth, async (req, res) => {
       review: reviewData,
       savedToHistory: !!savedReview
     });
-
   } catch (err) {
     console.error('Review error:', err);
     res.status(500).json({ error: 'Review failed. Please try again.' });
   }
 });
 
-// Get shared review by ID
 router.get('/share/:shareId', async (req, res) => {
   try {
     const review = await Review.findOne({ shareId: req.params.shareId }).select('-code');
