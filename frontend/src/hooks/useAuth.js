@@ -15,38 +15,40 @@ export const AuthProvider = ({ children }) => {
     if (stored) {
       try { setUser(JSON.parse(stored)); } catch (e) {}
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userData = {
-          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          email: firebaseUser.email,
-          uid: firebaseUser.uid,
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        try {
-          const res = await axios.post(API_URL + '/api/auth/google', {
-            name: firebaseUser.displayName,
-            email: firebaseUser.email,
-          });
-          localStorage.setItem('token', res.data.token);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
-          setUser(res.data.user);
-        } catch (e) {}
-      } else {
-        const stored = localStorage.getItem('user');
-        if (!stored) setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('onAuthStateChanged fired:', firebaseUser ? firebaseUser.email : 'null');
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
   const loginWithGoogle = async () => {
-    const result = await signInWithGoogle();
-    return result.user;
+    try {
+      const result = await signInWithGoogle();
+      const firebaseUser = result.user;
+      console.log('Google login success:', firebaseUser.email);
+      const userData = {
+        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        email: firebaseUser.email,
+        uid: firebaseUser.uid,
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      try {
+        const res = await axios.post(API_URL + '/api/auth/google', {
+          name: firebaseUser.displayName,
+          email: firebaseUser.email,
+        });
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+      } catch (e) {
+        console.log('Backend sync skipped');
+      }
+    } catch (err) {
+      console.error('Google login error:', err.code, err.message);
+      throw err;
+    }
   };
 
   const logout = async () => {
