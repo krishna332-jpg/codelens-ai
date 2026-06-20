@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { auth, firebaseSignOut } from '../firebase';
-import { onAuthStateChanged, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { auth, signInWithGoogle, firebaseSignOut } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
@@ -10,28 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const handleFirebaseUser = async (firebaseUser) => {
-    if (!firebaseUser) return;
-    const userData = {
-      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-      email: firebaseUser.email,
-      uid: firebaseUser.uid,
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-    try {
-      const res = await axios.post(API_URL + '/api/auth/google', {
-        name: firebaseUser.displayName,
-        email: firebaseUser.email,
-      });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      setUser(res.data.user);
-    } catch (e) {
-      console.log('Backend sync skipped, using Firebase auth');
-    }
-  };
-
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (stored) {
@@ -40,7 +18,22 @@ export const AuthProvider = ({ children }) => {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        await handleFirebaseUser(firebaseUser);
+        const userData = {
+          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          email: firebaseUser.email,
+          uid: firebaseUser.uid,
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        try {
+          const res = await axios.post(API_URL + '/api/auth/google', {
+            name: firebaseUser.displayName,
+            email: firebaseUser.email,
+          });
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+          setUser(res.data.user);
+        } catch (e) {}
       } else {
         const stored = localStorage.getItem('user');
         if (!stored) setUser(null);
@@ -52,8 +45,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    const result = await signInWithGoogle();
+    return result.user;
   };
 
   const logout = async () => {
