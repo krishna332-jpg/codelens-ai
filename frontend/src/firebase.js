@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgYHAGwXucg6I97HEzRxJ35vkIlYNgP7k",
-  authDomain: "codelens-ai-rho.vercel.app",
+  authDomain: "codelens-ai-ab48f.firebaseapp.com",
   projectId: "codelens-ai-ab48f",
   storageBucket: "codelens-ai-ab48f.firebasestorage.app",
   messagingSenderId: "767224218761",
