@@ -12,12 +12,12 @@ const ScoreRing = ({ score }) => {
   return (
     <div className="score-ring-wrapper">
       <svg className="score-ring" viewBox="0 0 110 110">
-        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7"/>
+        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="7"/>
         <circle cx="55" cy="55" r={r} fill="none" stroke={color} strokeWidth="7"
           strokeDasharray={circ} strokeDashoffset={progress} strokeLinecap="round"
           transform="rotate(-90 55 55)" style={{transition:'stroke-dashoffset 1.2s ease'}}/>
         <text x="55" y="51" textAnchor="middle" fill={color} fontSize="22" fontWeight="800" fontFamily="Inter">{score}</text>
-        <text x="55" y="66" textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="9" fontFamily="Inter" letterSpacing="1">SCORE</text>
+        <text x="55" y="66" textAnchor="middle" fill="rgba(0,0,0,0.3)" fontSize="9" fontFamily="Inter" letterSpacing="1">SCORE</text>
       </svg>
     </div>
   );
@@ -32,18 +32,11 @@ const IssueCard = ({ issue, index }) => (
     <p className="issue-message">{issue.message}</p>
     {issue.suggestion && (
       <div className="issue-suggestion">
-        <span style={{color:'#4ade80',flexShrink:0,marginTop:'1px'}}>→</span>
+        <span style={{color:'#16a34a',flexShrink:0,marginTop:'1px'}}>→</span>
         {issue.suggestion}
       </div>
     )}
   </div>
-);
-
-const ShareIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-  </svg>
 );
 
 const BackIcon = () => (
@@ -54,32 +47,23 @@ const BackIcon = () => (
 
 export default function ReviewResult({ result, language, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [copied, setCopied] = useState(false);
-  const { review, shareId } = result;
+  const { review } = result;
 
   const tabs = [
     { id: 'overview',    label: 'Overview' },
-    { id: 'bugs',        label: `Bugs (${review.bugs?.length || 0})` },
-    { id: 'security',    label: `Security (${review.security?.length || 0})` },
-    { id: 'performance', label: `Performance (${review.performance?.length || 0})` },
-    { id: 'practices',   label: `Best Practices (${review.bestPractices?.length || 0})` },
+    { id: 'bugs',        label: 'Bugs (' + (review.bugs?.length || 0) + ')' },
+    { id: 'security',    label: 'Security (' + (review.security?.length || 0) + ')' },
+    { id: 'performance', label: 'Performance (' + (review.performance?.length || 0) + ')' },
+    { id: 'practices',   label: 'Best Practices (' + (review.bestPractices?.length || 0) + ')' },
   ];
 
   const totalIssues = (review.bugs?.length||0) + (review.security?.length||0) + (review.performance?.length||0) + (review.bestPractices?.length||0);
-
-  const handleShare = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/share/${shareId}`);
-    setCopied(true); setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="result-page">
       <div className="result-topbar">
         <button className="back-btn" onClick={onBack}><BackIcon /> New review</button>
-        <div className="topbar-right">
-          <span className="lang-tag">{language}</span>
-          {shareId && <button className="share-btn" onClick={handleShare}><ShareIcon /> {copied ? 'Copied!' : 'Share'}</button>}
-        </div>
+        <span className="lang-tag">{language}</span>
       </div>
 
       <div className="result-layout">
@@ -99,7 +83,7 @@ export default function ReviewResult({ result, language, onBack }) {
         <div className="result-right">
           <div className="tabs">
             {tabs.map(tab => (
-              <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
+              <button key={tab.id} className={'tab' + (activeTab === tab.id ? ' active' : '')} onClick={() => setActiveTab(tab.id)}>
                 {tab.label}
               </button>
             ))}
