@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgYHAGwXucg6I97HEzRxJ35vkIlYNgP7k",
-  authDomain: "codelens-ai-ab48f.firebaseapp.com",
+  authDomain: "codelens-ai-rho.vercel.app",
   projectId: "codelens-ai-ab48f",
   storageBucket: "codelens-ai-ab48f.firebasestorage.app",
   messagingSenderId: "767224218761",
@@ -14,5 +14,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export { getRedirectResult, signInWithRedirect };
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const firebaseSignOut = () => signOut(auth);
