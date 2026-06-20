@@ -7,8 +7,11 @@ const reviewSchema = new mongoose.Schema({
     required: true
   },
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
+    default: null
+  },
+  userEmail: {
+    type: String,
     default: null
   },
   code: {
@@ -33,7 +36,7 @@ const reviewSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: 60 * 60 * 24 * 30 // 30 days TTL
+    expires: 60 * 60 * 24 * 30
   }
 });
 
