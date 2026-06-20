@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
     if (stored) {
       try { setUser(JSON.parse(stored)); } catch (e) {}
     }
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, () => {
       setLoading(false);
     });
     return unsubscribe;
@@ -24,13 +24,7 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     const result = await signInWithGoogle();
     const firebaseUser = result.user;
-    const userData = {
-      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-      email: firebaseUser.email,
-      uid: firebaseUser.uid,
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+
     try {
       const res = await axios.post(API_URL + '/api/auth/google', {
         name: firebaseUser.displayName,
@@ -39,7 +33,15 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setUser(res.data.user);
-    } catch (e) {}
+    } catch (e) {
+      const userData = {
+        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        email: firebaseUser.email,
+        uid: firebaseUser.uid,
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    }
   };
 
   const logout = async () => {
