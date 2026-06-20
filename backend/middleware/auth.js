@@ -1,30 +1,48 @@
 const jwt = require('jsonwebtoken');
 
-const auth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) {
-    req.user = null;
-    return next(); // Allow unauthenticated requests (guest mode)
-  }
+const verifyFirebaseToken = async (token) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key');
-    req.user = decoded;
-    next();
-  } catch (err) {
-    req.user = null;
-    next();
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    if (payload.exp && payload.exp < Date.now() / 1000) return null;
+    if (payload.email) {
+      return {
+        id: payload.sub || payload.user_id,
+        email: payload.email,
+        name: payload.name || payload.email.split('@')[0],
+        isFirebase: true,
+      };
+    }
+    return null;
+  } catch (e) {
+    return null;
   }
 };
 
-const requireAuth = (req, res, next) => {
+const auth = async (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) { req.user = null; return next(); }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key');
+    req.user = decoded; return next();
+  } catch (err) {
+    const firebaseUser = await verifyFirebaseToken(token);
+    if (firebaseUser) { req.user = firebaseUser; return next(); }
+    req.user = null; next();
+  }
+};
+
+const requireAuth = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Authentication required' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key');
-    req.user = decoded;
-    next();
+    req.user = decoded; return next();
   } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired token' });
+    const firebaseUser = await verifyFirebaseToken(token);
+    if (firebaseUser) { req.user = firebaseUser; return next(); }
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 
