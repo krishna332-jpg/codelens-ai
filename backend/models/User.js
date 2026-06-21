@@ -1,23 +1,42 @@
-// Google login
-router.post('/google', async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = new User({
-        name: name || email.split('@')[0],
-        email,
-        password: Math.random().toString(36) + Math.random().toString(36),
-        googleAuth: true,
-      });
-      await user.save();
-    }
-
-    const token = generateToken(user);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
-  } catch (err) {
-    res.status(500).json({ error: 'Google login failed' });
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  googleAuth: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);
